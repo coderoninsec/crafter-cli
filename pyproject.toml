@@ -1,0 +1,7 @@
+[project]
+name = "crafter"
+version = "0.1.0"
+dependencies = ["typer", "pyyaml"]
+
+[project.scripts]
+crafter = "crafter.cli:app"

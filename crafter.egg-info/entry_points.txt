@@ -1,0 +1,2 @@
+[console_scripts]
+crafter = crafter.cli:app
