@@ -3,16 +3,13 @@
 set -e
 
 # -------------------------
-# COLORS
+# COLORS (solo para prints estáticos)
 # -------------------------
 GREEN="\033[1;32m"
 CYAN="\033[1;36m"
 YELLOW="\033[1;33m"
 RESET="\033[0m"
 
-# -------------------------
-# VERSION
-# -------------------------
 VERSION="v0.1"
 
 # -------------------------
@@ -37,43 +34,52 @@ echo -e "${CYAN}        Crafter CLI${RESET}"
 echo ""
 
 # -------------------------
-# DOWNLOAD EFFECT
+# DOWNLOAD BAR (estable)
 # -------------------------
 echo -e "${CYAN}Downloading Crafter CLI (${VERSION})...${RESET}"
 
-for i in {1..30}; do
-  echo -n "#"
-  sleep 0.$((RANDOM % 3 + 1))
+BAR_WIDTH=30
+for ((i=0; i<=BAR_WIDTH; i++)); do
+  percent=$(( i * 100 / BAR_WIDTH ))
+  filled=$(printf "%${i}s" | tr ' ' '#')
+  empty=$(printf "%$((BAR_WIDTH-i))s" | tr ' ' '.')
+  printf "\r[%s%s] %d%%" "$filled" "$empty" "$percent"
+  sleep 0.02
 done
 
 echo ""
 echo ""
 
 # -------------------------
-# SPINNER FUNCTION
+# SPINNER (SIN COLORES)
 # -------------------------
 spinner() {
     local pid=$!
     local spin='-\|/'
     local i=0
 
+    tput civis 2>/dev/null || true
+
     while kill -0 $pid 2>/dev/null; do
         i=$(( (i+1) %4 ))
-        printf "\r${CYAN}Installing... ${spin:$i:1}${RESET}"
-        sleep .1
+        printf "\rInstalling... %s " "${spin:$i:1}"
+        sleep 0.1
     done
 
-    printf "\r"
+    printf "\rInstalling... done ✔\n"
+    tput cnorm 2>/dev/null || true
 }
 
 # -------------------------
-# INSTALL pipx (if needed)
+# pipx check
 # -------------------------
 if ! command -v pipx &> /dev/null; then
     echo -e "${YELLOW}Installing pipx...${RESET}"
+
     python3 -m pip install --user pipx >/dev/null 2>&1 &
     spinner
     wait
+
     python3 -m pipx ensurepath >/dev/null 2>&1
     export PATH="$HOME/.local/bin:$PATH"
 fi
@@ -90,8 +96,10 @@ wait
 # -------------------------
 # SUCCESS
 # -------------------------
+echo ""
 echo -e "${GREEN}✔ Crafter CLI installed successfully${RESET}"
 echo ""
+
 echo -e "${CYAN}Next steps:${RESET}"
 echo "  crafter help"
 echo ""
