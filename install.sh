@@ -2,15 +2,28 @@
 
 set -e
 
-# -------------------------
-# COLORS (solo para prints estáticos)
-# -------------------------
 GREEN="\033[1;32m"
 CYAN="\033[1;36m"
 YELLOW="\033[1;33m"
 RESET="\033[0m"
 
 VERSION="v0.1"
+
+# -------------------------
+# UNINSTALL MODE
+# -------------------------
+if [[ "$1" == "--uninstall" ]]; then
+    echo ""
+    echo "🗑 Removing Crafter CLI..."
+
+    if command -v pipx &> /dev/null; then
+        pipx uninstall crafter >/dev/null 2>&1 || true
+    fi
+
+    echo -e "${GREEN}✔ Crafter removed${RESET}"
+    echo ""
+    exit 0
+fi
 
 # -------------------------
 # BANNER
@@ -34,7 +47,7 @@ echo -e "${CYAN}        Crafter CLI${RESET}"
 echo ""
 
 # -------------------------
-# DOWNLOAD BAR (estable)
+# DOWNLOAD BAR
 # -------------------------
 echo -e "${CYAN}Downloading Crafter CLI (${VERSION})...${RESET}"
 
@@ -51,7 +64,7 @@ echo ""
 echo ""
 
 # -------------------------
-# SPINNER (SIN COLORES)
+# SPINNER
 # -------------------------
 spinner() {
     local pid=$!
@@ -71,7 +84,7 @@ spinner() {
 }
 
 # -------------------------
-# pipx check
+# pipx
 # -------------------------
 if ! command -v pipx &> /dev/null; then
     echo -e "${YELLOW}Installing pipx...${RESET}"

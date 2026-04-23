@@ -91,11 +91,12 @@ def help():
 
 task        → Show current task
 run         → Execute your solution
-test        → Validate (manual)
+test        → Validate 
 complete    → Mark task as completed
 next        → Move to next stage
 status      → Show progress
 doctor      → Check system
+uninstall   → Remove Crafter CLI
 
 [cyan]Flow:[/cyan]
 
@@ -172,7 +173,7 @@ def test():
 
 
 # -----------------------
-# COMPLETE
+# COMPLETE (MODIFICADO)
 # -----------------------
 
 @app.command()
@@ -182,8 +183,19 @@ def complete():
 
     header("✅ Task Completed")
 
-    console.print("[green]✔ Marked as completed[/green]")
-    console.print("[blue]👉 Next: crafter next[/blue]")
+    console.print("[green]✔ Task completed locally[/green]")
+
+    console.print("""
+[yellow]⚠ Progress not synced[/yellow]
+
+[cyan]Next step:[/cyan]
+
+1. Open the platform
+2. Mark this task as completed
+3. Unlock the next stage
+
+[blue]👉 https://securitycoder.vercel.app/crafter[/blue]
+""")
 
 
 # -----------------------
@@ -253,6 +265,29 @@ def doctor():
         console.print("[red]✖ Not inside project[/red]")
 
     console.print("[green]✔ CLI working[/green]")
+
+
+# -----------------------
+# UNINSTALL
+# -----------------------
+
+@app.command()
+def uninstall():
+    import subprocess
+
+    header("🗑 Uninstalling Crafter")
+
+    confirm = typer.confirm("Are you sure you want to uninstall Crafter?")
+    if not confirm:
+        console.print("[yellow]Cancelled[/yellow]")
+        raise typer.Exit()
+
+    try:
+        subprocess.run(["pipx", "uninstall", "crafter"], check=True)
+        console.print("[green]✔ Crafter removed successfully[/green]")
+    except Exception as e:
+        console.print("[red]✖ Failed to uninstall[/red]")
+        console.print(str(e))
 
 
 # -----------------------
