@@ -1,29 +1,39 @@
 import os
+import subprocess
 import sys
 import typer
 import yaml
 
 from rich.console import Console
 from rich.panel import Panel
+from crafter.core.config import load_config
+from crafter.evaluator.evaluator import evaluate
 
 app = typer.Typer(help="Crafter CLI - Code Ronin")
 console = Console()
 
 CONFIG_FILE = "crafter.yml"
+GREEN = "\033[32m"
+RED = "\033[31m"
+RESET = "\033[0m"
 
 
 # -----------------------
 # ENV CHECK
 # -----------------------
 
+
 def check_environment():
     if sys.prefix == sys.base_prefix:
-        console.print("[yellow]⚠ Running outside virtualenv (OK if using pipx)[/yellow]")
+        console.print(
+            "[yellow]⚠ Running outside virtualenv (OK if using pipx)[/yellow]"
+        )
 
 
 # -----------------------
 # HELPERS
 # -----------------------
+
 
 def header(title: str):
     console.print(Panel.fit(title, style="cyan"))
@@ -34,11 +44,6 @@ def ensure_project():
         header("✖ Not a Crafter project")
         console.print("[blue]👉 Follow setup instructions from the web[/blue]")
         raise typer.Exit()
-
-
-def load_cfg():
-    with open(CONFIG_FILE) as f:
-        return yaml.safe_load(f)
 
 
 def get_current_stage(cfg):
@@ -52,6 +57,7 @@ def get_current_stage(cfg):
 # -----------------------
 # ASCII ART
 # -----------------------
+
 
 def show_banner():
     code = r"""
@@ -79,6 +85,7 @@ def show_banner():
 # -----------------------
 # HELP
 # -----------------------
+
 
 @app.command()
 def help():
@@ -112,22 +119,25 @@ crafter next
 # TASK
 # -----------------------
 
+
 @app.command()
 def task():
     check_environment()
     ensure_project()
 
-    cfg = load_cfg()
+    try:
+        cfg = load_config()
+    except ValueError as exc:
+        console.print(f"[red]✖ {exc}[/red]")
+        raise typer.Exit(code=1)
     stage = get_current_stage(cfg)
 
     if not stage:
         console.print("[red]✖ Invalid stage config[/red]")
         return
 
-    header("📌 Current Task")
-
-    console.print(f"[cyan]Goal:[/cyan] {cfg.get('goal')}")
-    console.print(f"[cyan]Stage:[/cyan] {stage['id']} - {stage['name']}")
+    console.print(f"🎯 Stage: {stage['id']} - {stage['name']}")
+    console.print(f"📌 Goal: {stage.get('description') or cfg.get('goal') or ''}")
 
     if "description" in stage:
         console.print(f"\n{stage['description']}")
@@ -146,35 +156,91 @@ def task():
 # RUN
 # -----------------------
 
+
 @app.command()
 def run():
     check_environment()
     ensure_project()
 
-    header("⚙ Running solution")
+    run_script = os.path.abspath("run.sh")
+    if not os.path.exists(run_script):
+        raise typer.BadParameter("run.sh not found")
 
-    console.print("[yellow]⚠ Simulation mode[/yellow]")
-    console.print("[green]✔ Execution completed[/green]")
+    try:
+        result = subprocess.run(
+            [run_script],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise typer.Exit(code=1) from exc
+
+    output = result.stdout or ""
+    if output:
+        console.print(output, end="")
+
+    if result.returncode != 0:
+        raise typer.Exit(code=result.returncode)
 
 
 # -----------------------
 # TEST
 # -----------------------
 
+
 @app.command()
 def test():
     check_environment()
     ensure_project()
 
+    try:
+        cfg = load_config()
+    except ValueError as exc:
+        console.print(f"[red]✖ {exc}[/red]")
+        raise typer.Exit(code=1)
+
+    stage = get_current_stage(cfg)
+
+    if not stage:
+        console.print("[red]✖ Invalid stage config[/red]")
+        raise typer.Exit(code=1)
+
+    run_script = os.path.abspath("run.sh")
+
+    if not os.path.exists(run_script):
+        console.print("[red]✘ FAIL[/red]")
+        console.print("→ run.sh not found")
+        raise typer.Exit(code=1)
+
+    result = subprocess.run(
+        ["bash", run_script],
+        capture_output=True,
+        text=True,
+    )
+
+    output = result.stdout or ""
+    checks = stage.get("checks", [])
+
+    passed, error_message = evaluate(checks, output)
+
     header("🧪 Validation")
 
-    console.print("[yellow]⚠ Manual validation required[/yellow]")
-    console.print("[blue]👉 If correct: crafter complete[/blue]")
+    if passed:
+        console.print("[green]✔ PASS[/green]")
+        return
+
+    console.print("[red]✘ FAIL[/red]")
+    if error_message:
+        console.print(f"→ {error_message}")
+
+    raise typer.Exit(code=1)
 
 
 # -----------------------
 # COMPLETE (MODIFICADO)
 # -----------------------
+
 
 @app.command()
 def complete():
@@ -202,13 +268,17 @@ def complete():
 # NEXT
 # -----------------------
 
+
 @app.command()
 def next():
     check_environment()
     ensure_project()
 
-    with open(CONFIG_FILE) as f:
-        cfg = yaml.safe_load(f)
+    try:
+        cfg = load_config()
+    except ValueError as exc:
+        console.print(f"[red]✖ {exc}[/red]")
+        raise typer.Exit(code=1)
 
     current = cfg.get("stage", 1)
     total = len(cfg.get("stages", []))
@@ -232,12 +302,17 @@ def next():
 # STATUS
 # -----------------------
 
+
 @app.command()
 def status():
     check_environment()
     ensure_project()
 
-    cfg = load_cfg()
+    try:
+        cfg = load_config()
+    except ValueError as exc:
+        console.print(f"[red]✖ {exc}[/red]")
+        raise typer.Exit(code=1)
     current = cfg.get("stage", 1)
     total = len(cfg.get("stages", []))
 
@@ -252,6 +327,7 @@ def status():
 # -----------------------
 # DOCTOR
 # -----------------------
+
 
 @app.command()
 def doctor():
@@ -270,6 +346,7 @@ def doctor():
 # -----------------------
 # UNINSTALL
 # -----------------------
+
 
 @app.command()
 def uninstall():

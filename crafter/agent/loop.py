@@ -1,5 +1,6 @@
 from crafter.agent.tools import write
 
+
 def run_agent(prompt):
     print(f"[agent] prompt: {prompt}")
 
