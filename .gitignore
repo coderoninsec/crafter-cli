@@ -11,3 +11,7 @@ venv/
 .env
 
 test-crafter/
+# Crafter runtime (user files)
+crafter.yml
+run.sh
+.codex

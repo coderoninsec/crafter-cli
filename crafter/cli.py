@@ -1,11 +1,12 @@
 import os
 import subprocess
 import sys
+
 import typer
 import yaml
-
 from rich.console import Console
 from rich.panel import Panel
+
 from crafter.core.config import load_config
 from crafter.evaluator.evaluator import evaluate
 
@@ -63,8 +64,8 @@ def show_banner():
     code = r"""
    ██████╗ ██████╗ ██████╗ ███████╗
   ██╔════╝██╔═══██╗██╔══██╗██╔════╝
-  ██║     ██║   ██║██║  ██║█████╗  
-  ██║     ██║   ██║██║  ██║██╔══╝  
+  ██║     ██║   ██║██║  ██║█████╗
+  ██║     ██║   ██║██║  ██║██╔══╝
   ╚██████╗╚██████╔╝██████╔╝███████╗
    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
     """
@@ -98,7 +99,7 @@ def help():
 
 task        → Show current task
 run         → Execute your solution
-test        → Validate 
+test        → Validate
 complete    → Mark task as completed
 next        → Move to next stage
 status      → Show progress
@@ -214,7 +215,7 @@ def test():
         raise typer.Exit(code=1)
 
     result = subprocess.run(
-        ["bash", run_script],
+        ["bash", run_script, "test123"],
         capture_output=True,
         text=True,
     )
