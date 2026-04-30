@@ -84,6 +84,30 @@ spinner() {
 }
 
 # -------------------------
+# SYSTEM DEPENDENCIES (Debian / WSL)
+# -------------------------
+if [[ -f /etc/debian_version ]]; then
+    echo -e "${YELLOW}Installing system dependencies...${RESET}"
+
+    sudo apt update -y >/dev/null 2>&1
+
+    sudo apt install -y \
+        python3 \
+        python3-pip \
+        python3-venv \
+        curl \
+        git >/dev/null 2>&1
+fi
+
+# -------------------------
+# CHECK PYTHON
+# -------------------------
+if ! command -v python3 &> /dev/null; then
+    echo "Python3 is required but not installed."
+    exit 1
+fi
+
+# -------------------------
 # pipx
 # -------------------------
 if ! command -v pipx &> /dev/null; then
@@ -95,6 +119,16 @@ if ! command -v pipx &> /dev/null; then
 
     python3 -m pipx ensurepath >/dev/null 2>&1
     export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# -------------------------
+# VERIFY pipx
+# -------------------------
+if ! command -v pipx &> /dev/null; then
+    echo -e "${YELLOW}pipx installed but not in PATH.${RESET}"
+    echo "Run:"
+    echo "  export PATH=\$HOME/.local/bin:\$PATH"
+    exit 1
 fi
 
 # -------------------------
@@ -116,3 +150,12 @@ echo ""
 echo -e "${CYAN}Next steps:${RESET}"
 echo "  crafter help"
 echo ""
+
+echo ""
+echo -e "${CYAN}Next steps:${RESET}"
+echo "  crafter --help"
+echo ""
+
+if ! command -v crafter &> /dev/null; then
+    echo -e "${YELLOW}If 'crafter' not found, restart your terminal.${RESET}"
+fi
