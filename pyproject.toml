@@ -1,7 +1,18 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "crafter"
 version = "0.1.0"
-dependencies = ["typer", "pyyaml", "rich"]
+dependencies = [
+    "typer",
+    "rich",
+    "pyyaml"
+]
 
 [project.scripts]
-crafter = "crafter.cli:app"
+crafter = "crafter.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["crafter*"]
