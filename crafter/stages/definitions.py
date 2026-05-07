@@ -10,15 +10,14 @@ from __future__ import annotations
 from typing import Any
 
 
-# The first two stages are academy onboarding milestones. They guide the learner
-# through orientation and setup before the agent-specific capability checks kick
-# in.
+# The academy is the source of truth. Stage order, labels, and learning goals
+# are defined here once so the evaluator and roadmap can stay synchronized.
 STAGES: list[dict[str, Any]] = [
     {
         "id": 1,
         "slug": "introduction",
         "title": "Introduction",
-        "description": "Learn the shape of the Crafter journey.",
+        "description": "Understand the Crafter journey and learner contract.",
         "minutes": "5 min",
         "academy_order": 1,
         "check": None,
@@ -37,7 +36,7 @@ STAGES: list[dict[str, Any]] = [
         "description": "Configure your local environment.",
         "minutes": "10 min",
         "academy_order": 2,
-        "check": None,
+        "check": "project_structure",
         "capability": "Your local project is ready to run in the terminal.",
         "hint": "Make sure the scaffold is installed, the project root is valid, and Crafter can load the agent.",
         "explanation": "This stage is about preparing the workspace so the learner can move quickly through the rest of the academy without fighting setup issues.",
@@ -114,17 +113,17 @@ STAGES: list[dict[str, Any]] = [
         "id": 7,
         "slug": "agent-loop",
         "title": "Agent Loop",
-        "description": "Turn single prompts into an iterative flow.",
+        "description": "Solve a simple multi-step prompt.",
         "minutes": "15 min",
         "academy_order": 7,
-        "check": "reasoning",
-        "capability": "Your agent transforms an input into a simple answer.",
-        "hint": "Make the agent handle more than one kind of prompt instead of echoing the input.",
-        "explanation": "This stage pushes the learner toward a real agent loop: interpret, decide, and respond in a repeatable way.",
-        "why_it_matters": "The loop is what turns a one-off responder into something that can adapt to prompts.",
-        "implementation_example": "if input_text == \"2+2\":\n    return {\"output\": \"4\", \"tools_used\": [], \"memory\": {}, \"error\": None}",
-        "common_mistake": "Treating every prompt the same instead of building a loop that can route different inputs.",
-        "example": "if input_text == \"2+2\":\n    return {\"output\": \"4\", \"tools_used\": [], \"memory\": {}, \"error\": None}",
+        "check": "agent_loop",
+        "capability": "Your agent can handle a simple multi-step instruction.",
+        "hint": "Teach the agent to combine steps instead of only matching one prompt pattern.",
+        "explanation": "This stage moves beyond single-response behavior and teaches a lightweight reasoning loop that can follow a small sequence of instructions.",
+        "why_it_matters": "The loop is what turns a one-off responder into something that can process small tasks with momentum.",
+        "implementation_example": "if input_text == \"Add 1 to 3, then multiply by 2.\":\n    return {\"output\": \"8\", \"tools_used\": [], \"memory\": {}, \"error\": None}",
+        "common_mistake": "Only handling one isolated prompt instead of showing a small reasoning flow.",
+        "example": "if input_text == \"Add 1 to 3, then multiply by 2.\":\n    return {\"output\": \"8\", \"tools_used\": [], \"memory\": {}, \"error\": None}",
     },
     {
         "id": 8,
@@ -133,42 +132,42 @@ STAGES: list[dict[str, Any]] = [
         "description": "Create your own tool helper.",
         "minutes": "20 min",
         "academy_order": 8,
-        "check": "memory_primer",
-        "capability": "Your agent returns structured state for a run.",
-        "hint": "Add a tiny helper or tool-backed side effect and return structured memory.",
-        "explanation": "This stage encourages the learner to author a small helper of their own and keep the agent's internal state readable.",
-        "why_it_matters": "Writing a tool is where the learner starts shaping the agent's behavior instead of only wiring existing pieces together.",
-        "implementation_example": "return {\"output\": \"stored\", \"tools_used\": [], \"memory\": {\"alpha\": \"blue\"}, \"error\": None}",
-        "common_mistake": "Adding helper logic but not exposing any structured state to the learner or evaluator.",
-        "example": "return {\"output\": \"stored\", \"tools_used\": [], \"memory\": {\"alpha\": \"blue\"}, \"error\": None}",
+        "check": "write_tool",
+        "capability": "Your agent exposes at least one custom tool implementation.",
+        "hint": "Add a tool your agent authors itself, then make it visible through the tool registry.",
+        "explanation": "This stage focuses on tool authorship. The learner should move from using declared tools to writing one of their own.",
+        "why_it_matters": "Writing a tool is a key transition from using the academy scaffold to shaping the agent's behavior.",
+        "implementation_example": "def summarize(text: str) -> str:\n    return text.strip().lower()",
+        "common_mistake": "Leaving the tool registry as a placeholder instead of adding a real custom helper.",
+        "example": "def summarize(text: str) -> str:\n    return text.strip().lower()",
     },
     {
         "id": 9,
         "slug": "your-first-agent",
         "title": "Your First Agent",
-        "description": "Ship a complete learning milestone.",
+        "description": "Finish the academy path with a complete agent.",
         "minutes": "25 min",
         "academy_order": 9,
-        "check": "persistent_memory",
-        "capability": "Your agent remembers useful context across calls.",
-        "hint": "Store state on the agent and read it back on the next call.",
-        "explanation": "This capstone stage brings the learner to a first complete agent experience with durable memory and a clearer sense of continuity.",
-        "why_it_matters": "Persistence is what makes the learner's agent feel like a real companion rather than a stateless script.",
-        "implementation_example": "self.memory[\"alpha\"] = \"blue\"\nreturn {\"output\": self.memory.get(\"alpha\", \"\"), \"tools_used\": [], \"memory\": self.memory, \"error\": None}",
-        "common_mistake": "Resetting state on every run, which makes the agent forget everything immediately.",
-        "example": "self.memory[\"alpha\"] = \"blue\"\nreturn {\"output\": self.memory.get(\"alpha\", \"\"), \"tools_used\": [], \"memory\": self.memory, \"error\": None}",
+        "check": None,
+        "capability": "Your learning journey is complete.",
+        "hint": "Review the full path and confirm the agent now feels like a complete project.",
+        "explanation": "This final stage is the academy milestone. It marks the moment when the learner has progressed through the full guided path.",
+        "why_it_matters": "A completion milestone gives the learner a clear finish line and a sense of achievement.",
+        "implementation_example": "Review the entire agent and confirm every earlier milestone is complete.",
+        "common_mistake": "Treating the finish line like another technical test instead of the academy completion moment.",
+        "example": "Your agent is ready to run through the full learning path.",
     },
 ]
 
 
 CAPABILITY_LABELS: dict[str, str] = {
-    "first_response": "First output",
+    "project_structure": "Local Setup",
+    "first_response": "First Output",
     "llm_connection": "Connect LLM",
-    "reasoning": "Agent loop",
     "tool_definition": "Tools",
-    "tool_execution": "Tool execution",
-    "memory_primer": "Write tool",
-    "persistent_memory": "Your first agent",
+    "tool_execution": "Tool Execution",
+    "agent_loop": "Agent Loop",
+    "write_tool": "Write Tool",
 }
 
 
@@ -252,8 +251,8 @@ def resolve_stage(query: str) -> dict[str, Any] | None:
                 return stage
 
     aliases = {
-        "intro": 1,
         "introduction": 1,
+        "intro": 1,
         "local setup": 2,
         "local-setup": 2,
         "first output": 3,
@@ -263,12 +262,14 @@ def resolve_stage(query: str) -> dict[str, Any] | None:
         "tools": 5,
         "tool execution": 6,
         "tool-execution": 6,
+        "reasoning": 7,
         "agent loop": 7,
         "agent-loop": 7,
         "write tool": 8,
         "write-tool": 8,
         "your first agent": 9,
         "your-first-agent": 9,
+        "project structure": 2,
     }
     if normalized in aliases:
         stage_id = aliases[normalized]

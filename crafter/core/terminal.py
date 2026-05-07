@@ -7,22 +7,24 @@ to evolve the educational UX.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any
 
-from crafter.core.ascii import brand_banner, roadmap_state_symbol, stage_card
+from crafter.core.ascii import brand_banner, roadmap_state_symbol
 from crafter.core.output import (
     bullet_lines,
     definition_list,
+    box_block,
     failure_line,
     key_value,
-    roadmap_stage_line,
+    numbered_lines,
     section_header,
     separator,
+    stage_card,
     success_line,
 )
-from crafter.core.progress import progress_bar, progress_percent, progress_summary
+from crafter.core.progress import progress_meter, progress_summary
+from crafter.core.styles import BLUE, CYAN, GREEN, YELLOW, colorize, status_color
 from crafter.stages.definitions import (
     STAGES,
     capability_label,
@@ -60,13 +62,26 @@ def _quick_start_block() -> str:
     )
 
 
+def _academy_intro() -> str:
+    """Render the short motivational introduction shown across entry screens."""
+
+    return "\n".join(
+        [
+            "Learn to build AI agents progressively through stages.",
+            "",
+            "Start your journey:",
+            "  crafter create agent my-agent",
+        ]
+    )
+
+
 def render_root_help() -> str:
     """Render the top-level help text that introduces Crafter."""
 
     return "\n".join(
         [
-            "Crafter is an AI Agent Training Lab.",
-            "Learn to build AI agents progressively through stages.",
+            colorize("Crafter is an AI Agent Training Lab.", BLUE, bold=True),
+            _academy_intro(),
             "",
             _quick_start_block(),
             "",
@@ -82,19 +97,30 @@ def render_root_help() -> str:
 def render_home_screen() -> str:
     """Render the no-arguments landing screen for new users."""
 
+    title = colorize("CRAFTER — AI Agent Training Lab", CYAN, bold=True)
     return "\n".join(
         [
             separator(),
             brand_banner(),
             "",
-            "CRAFTER — AI Agent Training Lab",
+            title,
             "",
             "Learn to build AI agents progressively through stages.",
             "",
-            "Start here:",
-            "  crafter create agent my-agent",
+            box_block(
+                [
+                    "Start your journey",
+                    "crafter create agent my-agent",
+                    "Then explore the roadmap and hints.",
+                ],
+                width=54,
+                state="info",
+            ),
             "",
             _quick_start_block(),
+            "",
+            "Why this matters:",
+            "Crafter is designed to guide you step by step, not overwhelm you with technical noise.",
             separator(),
         ]
     )
@@ -128,7 +154,7 @@ def render_create_overview() -> str:
             separator(),
             brand_banner(),
             "",
-            "Create your first project",
+            colorize("Create your first project", CYAN, bold=True),
             "",
             "Available scaffolds:",
             definition_list(
@@ -144,90 +170,110 @@ def render_create_overview() -> str:
     )
 
 
-def _read_current_stage(project_root: Path | None = None) -> int:
-    """Read the current academy stage from crafter.yml.
+def _roadmap_state(stage: dict[str, Any], report: dict[str, Any]) -> str:
+    """Return the visual state for a stage in the roadmap.
 
-    The roadmap is a presentation layer, not a validator. If no project file is
-    available, the experience starts at the first stage so the learner still
-    sees a coherent academy path.
+    The state comes from the academy report so the roadmap cannot drift away
+    from the evaluator. A stage is completed only if it appears before the
+    current stage in the sequential progression.
     """
 
-    root = project_root or Path.cwd()
-    config_path = root / "crafter.yml"
-    if not config_path.exists():
-        return 1
-
-    try:
-        text = config_path.read_text(encoding="utf-8")
-    except OSError:
-        return 1
-
-    match = re.search(r"current_stage\s*:\s*([0-9]+)", text)
-    if not match:
-        return 1
-
-    current_stage = int(match.group(1))
-    if current_stage <= 0:
-        return 1
-    return current_stage
-
-
-def _roadmap_state(stage: dict[str, Any], current_order: int) -> str:
-    """Return the visual state for a stage in the roadmap."""
-
+    current_stage = report.get("current_stage")
+    completed_stages = int(report.get("completed_stages", 0))
     order = int(stage.get("academy_order", stage["id"]))
-    if order < current_order:
+    current_order = int(current_stage.get("academy_order", current_stage["id"])) if current_stage else None
+
+    if current_stage is None and completed_stages >= len(STAGES):
         return "completed"
-    if order == current_order:
+
+    if order <= completed_stages:
+        return "completed"
+
+    if current_order is not None and order == current_order:
         return "current"
+
     return "locked"
 
 
-def _roadmap_header(total: int, current_order: int) -> str:
+def _roadmap_header(total: int, completed: int) -> str:
     """Render the roadmap heading and progress summary."""
 
-    completed = max(0, min(current_order - 1, total))
-    percent = progress_percent(completed, total)
-    title_line = f"Build your Agent".ljust(40) + f"{percent}%"
-    return "\n".join(
-        [
-            title_line,
-            progress_bar(completed, total),
-        ]
-    )
+    return progress_meter("Build your Agent", completed, total, width=28)
 
 
-def render_roadmap(
-    stages: list[dict[str, Any]] = STAGES,
-    *,
-    project_root: Path | None = None,
-) -> str:
+def _preview_report_from_stages(stages: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build a minimal preview report from the official stage definitions."""
+
+    completed_stages = 0
+    current_stage = None
+
+    for stage in stages:
+        if stage.get("check") is None:
+            completed_stages += 1
+            continue
+
+        current_stage = stage
+        break
+
+    missing_capabilities = [current_stage["check"]] if current_stage and current_stage.get("check") else []
+
+    return {
+        "diagnostics": {},
+        "completed_stages": completed_stages,
+        "current_stage": current_stage,
+        "missing_capabilities": missing_capabilities,
+    }
+
+
+def render_roadmap(report: dict[str, Any], stages: list[dict[str, Any]] = STAGES) -> str:
     """Render the academy roadmap with visual stage states."""
 
-    current_order = _read_current_stage(project_root)
     total = len(stages)
+    completed = max(0, min(int(report.get("completed_stages", 0)), total))
+    current_stage = report.get("current_stage")
 
     lines = [
         separator(),
         brand_banner(),
         "",
-        _roadmap_header(total, current_order),
+        _roadmap_header(total, completed),
         separator(),
         "",
     ]
 
     for index, stage in enumerate(stages):
-        state = _roadmap_state(stage, current_order)
+        state = _roadmap_state(stage, report)
         symbol = roadmap_state_symbol(state)
-        lines.append(
-            roadmap_stage_line(
-                symbol,
-                stage["title"],
-                stage_description(stage),
-                stage_minutes(stage),
-            )
+
+        card = stage_card(
+            symbol,
+            stage["title"],
+            stage_description(stage),
+            stage_minutes(stage),
+            state=state,
         )
-        if index < total - 1:
+        lines.append(card)
+        if state == "current":
+            lines.append(
+                colorize(
+                    f"Current milestone: {stage['title']}",
+                    YELLOW,
+                    bold=True,
+                )
+            )
+            lines.append("Next action:")
+            lines.append("Open this stage and build toward the next unlock.")
+            lines.append("")
+        elif state == "completed":
+            lines.append(
+                colorize(
+                    f"Unlocked: {stage['title']}",
+                    GREEN,
+                    bold=True,
+                )
+            )
+            lines.append("")
+        else:
             lines.append("")
 
     lines.append(separator())
@@ -237,7 +283,7 @@ def render_roadmap(
 def render_stage_table(stages: list[dict[str, Any]] = STAGES) -> str:
     """Backward-compatible alias for the roadmap renderer."""
 
-    return render_roadmap(stages)
+    return render_roadmap(_preview_report_from_stages(stages), stages)
 
 
 def render_evaluation_report(report: dict[str, Any], stages: list[dict[str, Any]] = STAGES) -> str:
@@ -278,6 +324,21 @@ def render_evaluation_report(report: dict[str, Any], stages: list[dict[str, Any]
 
     lines.append("")
     if current_stage is None:
+        lines.extend(
+            [
+                box_block(
+                    [
+                        "Stage Complete: Your First Agent",
+                        "You unlocked the full academy path.",
+                        "Next steps:",
+                        "Run crafter stages to review the full roadmap.",
+                    ],
+                    width=54,
+                    state="completed",
+                ),
+                "",
+            ]
+        )
         lines.extend(
             [
                 "Missing Stage: None",
@@ -335,8 +396,15 @@ def render_doctor_report(path: Path, checks: list[Any], summary: dict[str, Any])
 def render_next_report(report: dict[str, Any], stages: list[dict[str, Any]] = STAGES) -> str:
     """Render the next learning objective after the current stage."""
 
-    completed_stage = report["current_stage"]
-    next_stage = stages[report["completed_stages"]] if report["completed_stages"] < len(stages) else None
+    current_stage = report["current_stage"]
+    completed_count = int(report.get("completed_stages", 0))
+
+    if current_stage is None:
+        completed_stage = stages[-1] if stages else None
+        next_stage = None
+    else:
+        completed_stage = stages[completed_count - 1] if completed_count > 0 else None
+        next_stage = current_stage
 
     if completed_stage is None:
         return "\n".join(
@@ -360,19 +428,53 @@ def render_next_report(report: dict[str, Any], stages: list[dict[str, Any]] = ST
     ]
 
     if next_stage is None:
+        completion_card = box_block(
+            [
+                f"Stage Complete: {completed_stage['title']}",
+                "You unlocked the next milestone in the academy.",
+                "What to do next:",
+                "Review the roadmap and keep progressing.",
+            ],
+            width=54,
+            state="completed",
+        )
         lines.extend(
             [
                 "Next Stage: complete",
                 "Next Objective:",
                 "Your agent has completed all stages in the learning path.",
+                "",
+                completion_card,
             ]
         )
         return "\n".join(lines)
+
+    unlock_steps = numbered_lines(
+        [
+            f"Open {stages[completed_count].get('title', 'the next stage')} in the roadmap.",
+            f"Update app/agent.py to match the next milestone.",
+            "Run crafter test --path . to confirm the unlock.",
+        ]
+    )
+
+    unlock_card = box_block(
+        [
+            f"Stage Complete: {completed_stage['title']}",
+            f"You unlocked: {next_stage['title']}",
+            "",
+            "Next steps:",
+            *unlock_steps.splitlines(),
+        ],
+        width=54,
+        state="completed",
+    )
 
     lines.extend(
         [
             f"Next Stage: {next_stage['title']}",
             f"Next Objective: {stage_description(next_stage)}",
+            "",
+            unlock_card,
         ]
     )
 
@@ -394,9 +496,11 @@ def render_explain_report(stage: dict[str, Any]) -> str:
     lines = [
         section_header(f"Stage: {stage['title']}"),
         stage_card(
+            roadmap_state_symbol("info"),
             stage["title"],
             stage_description(stage),
-            status=stage_hint(stage) or stage_capability(stage),
+            stage_minutes(stage) or " ",
+            state="info",
         ),
         f"What it means: {stage_explanation(stage)}",
     ]
@@ -434,17 +538,29 @@ def render_hint_report(report: dict[str, Any]) -> str:
     lines = [
         section_header("Crafter Hint"),
         f"Current Stage: {completed_stage['title']}",
+        f"Learning Goal: {stage_capability(completed_stage)}",
     ]
 
     explanation = stage_description(completed_stage)
+    why_it_matters = stage_why_it_matters(completed_stage)
     hint_text = stage_hint(completed_stage)
-    example = stage_example(completed_stage)
+    example = stage_implementation_example(completed_stage)
 
     if explanation:
         lines.extend(["Explanation:", explanation])
+    if why_it_matters:
+        lines.extend(["Why it matters:", why_it_matters])
     if hint_text:
         lines.extend(["Hint:", hint_text])
     if example:
-        lines.extend(["Example:", example])
+        lines.extend(["Implementation Example:", example])
+
+    lines.extend(
+        [
+            "",
+            "Next Action:",
+            "Edit app/agent.py and run crafter test again.",
+        ]
+    )
 
     return "\n".join(lines)

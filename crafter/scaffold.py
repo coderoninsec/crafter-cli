@@ -48,16 +48,16 @@ def _agent_py_content(project_name: str) -> str:
             """Minimal agent contract required by Crafter."""
 
             def __init__(self) -> None:
-                # TODO: implement persistent memory.
-                # This scaffold intentionally starts with no retained state.
+                # The academy starts with a minimal, stateful shell. Learners
+                # grow this object stage by stage as the roadmap unlocks.
                 self.memory: dict[str, str] = {{}}
 
             def run(self, input_text: str) -> dict:
                 """Return the canonical Crafter response schema.
 
-                TODO: implement the first learning stage yourself.
-                TODO: add reasoning, tool usage, and durable memory later.
-                This agent is intentionally incomplete for learning purposes.
+                TODO: implement the academy stages one by one.
+                The scaffold is intentionally incomplete so the learner can
+                feel progression instead of starting from a finished template.
                 """
 
                 return {{
@@ -196,11 +196,12 @@ def _readme_content(project_name: str) -> str:
 
         Crafter evaluates your agent in stages. This lab is meant to:
 
-        - start with no completed stages
-        - require you to implement `ping` -> `pong`
-        - require you to implement reasoning
-        - require you to implement tools
-        - require you to implement memory
+        - start with an introduction and local setup step
+        - guide you to your first output
+        - connect a simple LLM-style flow
+        - introduce tools and tool execution
+        - teach an agent loop and custom tool writing
+        - finish with your first complete agent
 
         Nothing is solved yet. The learner must build the agent progressively,
         stage by stage.

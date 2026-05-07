@@ -8,8 +8,9 @@ abstraction layer.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from textwrap import wrap
 
-from crafter.core.styles import DEFAULT_WIDTH, rule, status_label
+from crafter.core.styles import DEFAULT_WIDTH, colorize, rule, status_color, status_label
 
 
 def section_header(title: str, width: int = DEFAULT_WIDTH) -> str:
@@ -59,6 +60,70 @@ def definition_list(items: Iterable[tuple[str, str]]) -> str:
         if clean_label and clean_description:
             lines.append(f"* {clean_label.ljust(8)} {clean_description}")
     return "\n".join(lines)
+
+
+def _visible_width(text: str) -> int:
+    """Return a rough visible width for ASCII/ANSI-safe strings.
+
+    Crafter keeps terminal rendering intentionally simple, so this uses a plain
+    length-based estimate instead of a heavier text layout dependency.
+    """
+
+    return len(text)
+
+
+def box_block(
+    lines: Iterable[str],
+    *,
+    width: int = DEFAULT_WIDTH,
+    state: str | None = None,
+    enable_color: bool | None = None,
+) -> str:
+    """Render a lightweight terminal card with box drawing characters."""
+
+    content = [str(line).rstrip() for line in lines]
+    inner_width = max(18, width - 4)
+    padded: list[str] = []
+
+    for line in content:
+        wrapped = wrap(line, width=inner_width) or [""]
+        for chunk in wrapped:
+            padded.append(chunk)
+
+    longest = max((_visible_width(line) for line in padded), default=0)
+    card_width = min(width, max(24, longest + 4))
+    inner_width = card_width - 4
+
+    top = f"╭{'─' * (card_width - 2)}╮"
+    bottom = f"╰{'─' * (card_width - 2)}╯"
+    state_color = status_color(state or "info")
+
+    rendered: list[str] = [top]
+    for line in padded:
+        clean = line[:inner_width]
+        rendered.append(f"│ {clean.ljust(inner_width)} │")
+    rendered.append(bottom)
+
+    if state:
+        rendered = [colorize(line, state_color, enable=enable_color) for line in rendered]
+    return "\n".join(rendered)
+
+
+def stage_card(
+    symbol: str,
+    title: str,
+    description: str,
+    minutes: str,
+    *,
+    state: str = "info",
+    width: int = DEFAULT_WIDTH,
+    enable_color: bool | None = None,
+) -> str:
+    """Render a visual stage card for roadmap and unlock screens."""
+
+    head = f"{symbol} {title}".rstrip()
+    body = [head, description.strip(), minutes.strip()]
+    return box_block(body, width=width, state=state, enable_color=enable_color)
 
 
 def success_line(text: str) -> str:

@@ -15,6 +15,7 @@ from typing import Any
 from uuid import uuid4
 
 from crafter.agent.loader import AgentLoadError, load_agent
+from crafter.project import project_structure_issues
 
 
 @dataclass(frozen=True)
@@ -96,21 +97,12 @@ def _load_agent_module(agent_path: Path):
 def _check_structure(project_root: Path) -> DoctorCheck:
     """Validate the expected project layout."""
 
-    app_dir = project_root / "app"
-    if not app_dir.exists():
-        return _fail(
-            "[FAIL] project structure",
-            "The app/ directory is missing, so Crafter cannot load the agent entry point.",
-            "Create an app/ directory and place agent.py inside it.",
-        )
-
-    required = [app_dir / "agent.py", project_root / "crafter.yml"]
-    missing = [path for path in required if not path.exists()]
+    missing = project_structure_issues(project_root)
     if missing:
-        missing_names = ", ".join(path.relative_to(project_root).as_posix() for path in missing)
+        missing_names = ", ".join(missing)
         return _fail(
             "[FAIL] project structure",
-            f"Missing required files: {missing_names}.",
+            f"Missing required project files: {missing_names}.",
             "Create the missing files so the evaluator and loader can find the project contract.",
         )
 

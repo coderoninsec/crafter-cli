@@ -7,6 +7,7 @@ the command layer thin.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from crafter.evaluator.diagnostics import run_diagnostics
@@ -26,40 +27,73 @@ def _next_missing_capabilities(diagnostics: dict[str, bool]) -> list[str]:
     return []
 
 
+def academy_preview_report() -> dict[str, Any]:
+    """Return the roadmap state before a project has been evaluated.
+
+    This keeps the academy discoverable for first-time users. The preview still
+    comes from the official stage definitions, so it stays synchronized with the
+    academy path instead of inventing its own order.
+    """
+
+    completed_stages = 0
+    current_stage = None
+
+    for stage in STAGES:
+        check = stage["check"]
+        if check is None:
+            completed_stages += 1
+            continue
+
+        current_stage = stage
+        break
+
+    missing_capabilities = [current_stage["check"]] if current_stage and current_stage.get("check") else []
+
+    return {
+        "diagnostics": {},
+        "completed_stages": completed_stages,
+        "current_stage": current_stage,
+        "missing_capabilities": missing_capabilities,
+    }
+
+
 def current_failed_stage(report: dict[str, Any]) -> dict[str, Any] | None:
     """Return the first stage that still needs work for the given report."""
 
-    completed_stages = int(report.get("completed_stages", 0))
-    if completed_stages >= len(STAGES):
-        return None
-    return STAGES[completed_stages]
+    return report.get("current_stage")
 
 
-def evaluate_agent(agent: Any) -> dict[str, Any]:
-    """Evaluate an agent against the stage ladder and return a full report."""
+def evaluate_agent(agent: Any, *, project_root: Path | None = None) -> dict[str, Any]:
+    """Evaluate an agent against the academy ladder and return a full report.
 
-    diagnostics = run_diagnostics(agent)
+    The evaluator does not invent its own order. It walks the official academy
+    stages sequentially so the roadmap, diagnostics, and progression stay in
+    sync.
+    """
+
+    diagnostics = run_diagnostics(agent, project_root=project_root)
 
     completed_stages = 0
-    current_stage = STAGES[0] if STAGES else None
+    current_stage = None
 
     for stage in STAGES:
         check = stage["check"]
 
-        # Stages without a check are design/introductory stages and are always complete.
+        # Stages without a check are academy milestones, not validator gates.
+        # They complete automatically once the learner reaches this point in the
+        # progression.
         if check is None:
             completed_stages += 1
-            current_stage = stage
             continue
 
         if diagnostics.get(check, False):
             completed_stages += 1
-            current_stage = stage
             continue
 
+        current_stage = stage
         break
 
-    if completed_stages == len(STAGES):
+    if current_stage is None and completed_stages == len(STAGES):
         current_stage = None
 
     missing_capabilities = _next_missing_capabilities(diagnostics)

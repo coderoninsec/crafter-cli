@@ -25,8 +25,8 @@ from crafter.core.terminal import (
     render_roadmap,
 )
 from crafter.doctor import summarize_checks, validate_project
+from crafter.evaluator.runner import academy_preview_report
 from crafter.evaluator.runner import evaluate_agent
-from crafter.evaluator.runner import current_failed_stage
 from crafter.scaffold import ScaffoldError, create_agent_scaffold
 from crafter.stages.definitions import resolve_stage
 
@@ -51,7 +51,7 @@ def _load_and_evaluate(path: Path) -> dict:
     """Load the agent from disk and evaluate it against the stage ladder."""
 
     agent = load_agent(path)
-    return evaluate_agent(agent)
+    return evaluate_agent(agent, project_root=path)
 
 
 @app.callback(invoke_without_command=True)
@@ -113,8 +113,25 @@ def status(
 
 
 @app.command(help="View your AI agent learning roadmap.")
-def stages() -> None:
-    print(render_roadmap())
+def stages(
+    path: Path = typer.Option(
+        Path("."),
+        "--path",
+        "-p",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+        help="Path to the learner project root.",
+    ),
+) -> None:
+    try:
+        report = _load_and_evaluate(path)
+    except AgentLoadError:
+        report = academy_preview_report()
+
+    print(render_roadmap(report))
 
 
 @app.command(help="See the next stage in your learning path.")
@@ -190,8 +207,7 @@ def hint(
         print(f"Error: {exc}")
         raise typer.Exit(code=1)
 
-    stage = current_failed_stage(report)
-    print(render_hint_report({"current_stage": stage}))
+    print(render_hint_report(report))
 
 
 @create_app.callback(invoke_without_command=True)
