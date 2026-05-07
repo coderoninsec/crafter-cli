@@ -3,13 +3,10 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "crafter"
+name = "crafter-cli"
 version = "0.1.0"
-dependencies = [
-    "typer",
-    "rich",
-    "pyyaml"
-]
+requires-python = ">=3.10"
+dependencies = ["typer>=0.12"]
 
 [project.scripts]
 crafter = "crafter.cli:main"

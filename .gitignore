@@ -1,17 +1,33 @@
+# Python bytecode
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+**/__pycache__/
+*.py[cod]
 
+# Packaging
 build/
 dist/
 *.egg-info/
 
+# Virtual environments
+.venv/
 venv/
-.env
+env/
 
-test-crafter/
-# Crafter runtime (user files)
-crafter.yml
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Pytest / cache
+.pytest_cache/
+
+# Misc
+*.log
+
+# Local runtime files
+.codex/
 run.sh
-.codex
+test-crafter/
+crafter.yml
